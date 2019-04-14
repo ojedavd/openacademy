@@ -62,12 +62,20 @@ class Session(models.Model):
     instructor_id = fields.Many2one('res.partner', string="Instructor",
         domain=['|', ('instructor', '=', True),
                      ('category_id.name', 'ilike', "Teacher")])
+    
     course_id = fields.Many2one('openacademy.course',
         ondelete='cascade', string="Course", required=True)
+    
     attendee_ids = fields.Many2many('res.partner', string="Attendees")
+    
     taken_seats = fields.Float(string="Taken seats", compute='_taken_seats')
+    
     end_date = fields.Date(string="End Date", store=True,
         compute='_get_end_date', inverse='_set_end_date')
+    
+    hours = fields.Float(string="Duration in hours",
+                         compute='_get_hours', inverse='_set_hours')
+
 
     @api.depends('seats', 'attendee_ids')
     def _taken_seats(self):
@@ -118,6 +126,14 @@ class Session(models.Model):
             end_date = fields.Datetime.from_string(r.end_date)
             r.duration = (end_date - start_date).days + 1
 
+    @api.depends('duration')
+    def _get_hours(self):
+        for r in self:
+            r.hours = r.duration * 24
+
+    def _set_hours(self):
+        for r in self:
+            r.duration = r.hours / 24
 
     @api.constrains('instructor_id', 'attendee_ids')
     def _check_instructor_not_in_attendees(self):
